@@ -151,6 +151,7 @@ def main():
 
                 if average_distance < vehicle.target_distance + vehicle.error_distance and average_distance > vehicle.target_distance - vehicle.error_distance :
                     if left_average > right_average:
+                        # TODO: Allow for angle error
                         print("Angle fix.")
                         command = "left"
                     elif left_average < right_average:

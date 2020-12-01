@@ -76,5 +76,8 @@ The initial attempt to test a multisensor setup's viability is to use the existi
 - This system is very rough, using only two points of detection. Similar to existing solutions with two ultrasonic sensors on the side of the vehicle.
 - The solution will be tested on the Landrov, inside.
 
-#### Test 1 - Landrov inside
+#### Test 1 - Landrov Inside
 
+The rover followed the walls, measuring distance from them accurately. However, the turning was very jumpy and aggressive. Leading to the vehicle moving to close to the wall, then too far away and repeating that pattern.
+
+Once the system is improved to use all information. The angle should be used to create a smooth turning system. This should remove the jumpiness and overshooting of the current system.
