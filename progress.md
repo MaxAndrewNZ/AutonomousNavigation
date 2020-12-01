@@ -44,12 +44,12 @@ Hoping to set up ORB-SLAM2 for the single D435 camera. This will allow the scene
 
     - Pangolin
     - OpenCV 4.5.0
-    - eigen 3.3.8
+    - Eigen 3.3.8
     - ORB_SLAM2
 
 Think I need root access to install ROS. Will likely need ROS.
 
-Tried running the RGB-D example using data downloaded from http://vision.in.tum.de/data/datasets/rgbd-dataset/download. Ran into issues with associations. Therfore, was not able to run the examples.
+Tried running the RGB-D example using data downloaded from http://vision.in.tum.de/data/datasets/rgbd-dataset/download. Ran into issues with associations. Therefore, was not able to run the examples.
 
 Leaving ORB-SLAM2 for now. Will attempt multi sensor setups.
 
@@ -58,3 +58,23 @@ This setup will have two D435 cameras mounted to the rover. One on the front of 
 
 - The camera mounted to the front will be used for both obstacle avoidance and row following. 
 - The side mounted camera will only be used for row following.
+
+### States
+
+- The vehicle is at the target distance from the row wall. Therefore, remain navigating forwards.
+- The vehicle is not at the target distance. Turn vehicle to reach target distance.
+- The angle of the vehicle relative to the wall is not 0. Turn the vehicle to make the angle 0. Will need to determine if the change in angle is due to reaching the end of the row. The forwards facing camera can be used to determine this.
+- If the end of the row is reached, turn at a constant distance around the end.
+
+### Attempting to adjust Landrov to have camera facing wall
+
+The initial attempt to test a multisensor setup's viability is to use the existing landrov platform. Turning the camera to the side will help to test how well the system may work for wall following.
+
+- The camera was turned on the Landrov. It now faces directly to the left of the vehicles navigation direction.
+- The `side_camera_test` holds the python scripts for this test.
+- Exiting files from my full year project were used with major adjustments.
+- This system is very rough, using only two points of detection. Similar to existing solutions with two ultrasonic sensors on the side of the vehicle.
+- The solution will be tested on the Landrov, inside.
+
+#### Test 1 - Landrov inside
+
