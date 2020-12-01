@@ -81,3 +81,15 @@ The initial attempt to test a multisensor setup's viability is to use the existi
 The rover followed the walls, measuring distance from them accurately. However, the turning was very jumpy and aggressive. Leading to the vehicle moving to close to the wall, then too far away and repeating that pattern.
 
 Once the system is improved to use all information. The angle should be used to create a smooth turning system. This should remove the jumpiness and overshooting of the current system.
+
+## Optimising Landrov - Dec 2
+
+Attempting to move the pointcloud downsampling to the Landrov. This should hopefully reduce lag due to sending large pointcloud strings over wifi.
+
+## Set Turning Times
+
+- Creating methods to handle turning the vehicle a set angle.
+- Have to calculate the angle of the vehicle relative to the wall. This could be done with plane estimation or with a simplier two point calculation.
+
+### Testing Turning
+
