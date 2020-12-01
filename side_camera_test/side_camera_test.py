@@ -27,17 +27,17 @@ def main():
     """
   
     ############      Configuration        ##################
-    testing = True
+    testing = False
     visualising = False
     save_clouds = False
     custom_folder_name = "testing_side"
 
     following_side = "left" # left or right
-    target_distance = 1.1 # Meters
-    error_distance = 0.10 # Meters
-    error_angle = 10.0 # Degreesl
+    target_distance = 0.4 # Meters
+    error_distance = 0.20 # Meters
+    error_angle = 10.0 # Degrees
 
-    speed = 0.3 # Speed of the vehicle
+    speed = 0.0 # Speed of the vehicle
     turn_speed = 0.5 # Speed * 2 normally
     turn_time_multiplier = 0.0 # Consecutive turns get bigger
     maximum_turns = 10 # Vehicle will stop after turning this many times in a row
@@ -158,8 +158,7 @@ def main():
 
                 if average_distance < vehicle.target_distance + vehicle.error_distance and average_distance > vehicle.target_distance - vehicle.error_distance:
                     # TODO: Calculate angle here
-                    angle = calculate_wall_angle(left_average, right_average)
-                    print("Angle from wall:", round(angle, 2))
+                    
                     # if left_average > right_average:
                     #     vehicle.calculate_travel_time(angle)
                     #     print("Angle fix.")
@@ -167,6 +166,8 @@ def main():
                     # elif left_average < right_average:
                     #     print("Angle fix.")
                     #     command = "right"
+                    angle = calculate_wall_angle(left_average, right_average)
+                    print("Angle from wall:", round(angle, 2))
                     if angle > (vehicle.error_angle / 2):
                         print("Angle fix.")
                         vehicle.calculate_travel_time(angle)
@@ -180,11 +181,17 @@ def main():
                         command = "forward"
                 elif average_distance > vehicle.target_distance:
                     print("Too far.")
+                    vehicle.travel_time = 0.2
                     command = "left"
                 elif average_distance < vehicle.target_distance:
                     print("Too close.")
+                    vehicle.travel_time = 0.2
                     command = "right"
-
+                else: 
+                    command = "stop"
+                    
+                if command == "left" or command == "right":
+                    vehicle.turn(command)
 
                 print("Command:", command)
 

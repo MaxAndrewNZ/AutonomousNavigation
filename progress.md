@@ -84,12 +84,16 @@ Once the system is improved to use all information. The angle should be used to 
 
 ## Optimising Landrov - Dec 2
 
-Attempting to move the pointcloud downsampling to the Landrov. This should hopefully reduce lag due to sending large pointcloud strings over wifi.
+- Attempting to move the pointcloud downsampling to the Landrov. This should hopefully reduce lag due to sending large pointcloud strings over wifi. Have not completed this due to having to install Open3D on the Landrov and likely having to do a lot of processing onboard the vehicle. I will revisit this point if it is necessary. For now it will return to the backlog.
 
-## Set Turning Times
+- The Landrov was updated to no longer send rgb and depth images. This should increase its efficiency when wending pointclouds over wifi.
+
+## Set Turning Times - Dec 2
 
 - Creating methods to handle turning the vehicle a set angle.
 - Have to calculate the angle of the vehicle relative to the wall. This could be done with plane estimation or with a simplier two point calculation.
 
-### Testing Turning
+### Testing Turning - Dec 2
 
+- The system could follow a flat wall, making small angle adjustments when needed. These adjustments were quite aggressive.
+- The current method resulted in issues wen the rover was outside of the target distance error range. It would turn towards the wall if it was too far away. However, this resuted in the average distance increasing due to taking the two region average for the distance average. This will need to change to fix this issue. I will investigate a more robust method for wall following using a depth camera.
