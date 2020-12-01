@@ -27,7 +27,7 @@ class Vehicle:
         self.turn_speed = 0.0
         self.turn_time_multiplier = 0.0
         self.maximum_turns = 0
-        self.travel_time = 0.0
+        self.travel_time = 0.2
         self.wheel_distance_between = 0.35
         self.velocity_multiplier = 0.7
         self.max_range = 3.0

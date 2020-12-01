@@ -19,15 +19,15 @@ def main():
     """
   
     ############      Configuration        ##################
-    testing = True
+    testing = False
     visualising = False
-    save_clouds = False
+    save_clouds = True
     custom_folder_name = "testing_side"
 
     following_side = "left" # left or right
-    target_distance = 0.5 # Meters
-    error_distance = 0.15 # Meters
-    error_angle = 7.0 # Degrees
+    target_distance = 0.7 # Meters
+    error_distance = 0.10 # Meters
+    error_angle = 7.0 # Degreesl
 
     speed = 0.3 # Speed of the vehicle
     turn_speed = 0.5 # Speed * 2 normally
@@ -135,7 +135,6 @@ def main():
                 if visualising:
                     visualise.visualise(point_clouds)
 
-                # TODO: Fix these averages.
                 left_points = np.asarray(left.pcd.points)
                 left_average = np.mean(left_points, axis=0)[2]
 
@@ -151,20 +150,22 @@ def main():
                 # TODO: Wall angle adjust logic
 
                 if average_distance < vehicle.target_distance + vehicle.error_distance and average_distance > vehicle.target_distance - vehicle.error_distance :
-                    print("At target distance.")
-                    command = "forward"
+                    if left_average > right_average:
+                        print("Angle fix.")
+                        command = "left"
+                    elif left_average < right_average:
+                        print("Angle fix.")
+                        command = "right"
+                    else:
+                        print("At target distance.")
+                        command = "forward"
                 elif average_distance > vehicle.target_distance:
                     print("Too far.")
                     command = "left"
                 elif average_distance < vehicle.target_distance:
                     print("Too close.")
                     command = "right"
-                elif left_average > right_average:
-                    print("Angle fix.")
-                    command = "left"
-                elif left_average < right_average:
-                    print("Angle fix.")
-                    command = "right"
+
 
                 print("Command:", command)
 
