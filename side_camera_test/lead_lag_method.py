@@ -5,6 +5,7 @@ import open3d as o3d
 import pointcloud as pc
 import vehicle as veh
 import visualise_pointclouds as visualise
+import plane_estimation as pe
 import math
 from ast import literal_eval
 import random
@@ -27,17 +28,17 @@ def main():
     """
   
     ############      Configuration        ##################
-    testing = False
-    visualising = False
+    testing = True
+    visualising = True
     save_clouds = False
     custom_folder_name = "testing_side"
 
     following_side = "left" # left or right
     target_distance = 0.4 # Meters
-    error_distance = 0.20 # Meters
+    error_distance = 0.1 # Meters
     error_angle = 10.0 # Degrees
 
-    speed = 0.0 # Speed of the vehicle
+    speed = 0.3 # Speed of the vehicle
     turn_speed = 0.5 # Speed * 2 normally
     turn_time_multiplier = 0.0 # Consecutive turns get bigger
     maximum_turns = 10 # Vehicle will stop after turning this many times in a row
@@ -51,16 +52,16 @@ def main():
 
     # Z
     stopMinZ = 0.0
-    stopMaxZ = 1.5
+    stopMaxZ = 1.0
 
     # Y
     minY = -0.6
-    maxY = 0.1
+    maxY = 0.0
 
     # Visualisation region colours37
-    mainColour = [1, 0, 0]
-    leftColour = [0, 1, 0]
-    rightColour = [0, 0, 1]
+    main_colour = [1, 0, 0]
+    lag_colour = [0, 1, 0]
+    lead_colour = [0, 0, 1]
 
     ############      main loop        ##################
     vehicle = veh.Vehicle("tcp://192.168.8.106", "5556", "5557")
@@ -79,11 +80,11 @@ def main():
     stopMin = [leftMaxX, minY, stopMinZ]
     stopMax = [rightMinX, maxY, stopMaxZ]
 
-    leftMin = [-1, minY, stopMinZ]
+    leftMin = [-2, minY, stopMinZ]
     leftMax = [0, maxY, stopMaxZ]
 
     rightMin = [0, minY, stopMinZ]
-    rightMax = [1, maxY, stopMaxZ]
+    rightMax = [2, maxY, stopMaxZ]
 
     custom_folder_name += "_" + following_side + "_" + str(target_distance) + "_" + str(speed) + "_" + str(int(time.time()))
     time_start = time.time()
@@ -121,14 +122,14 @@ def main():
             else:
                 downpcd = pcd.voxel_down_sample(voxel_size=0.01)
 
-                cloud = pc.PointCloud(downpcd, mainColour, stopMin, stopMax)
-                left = pc.PointCloud(downpcd, leftColour, leftMin, leftMax)
-                right = pc.PointCloud(downpcd, rightColour, rightMin, rightMax)
+                cloud = pc.PointCloud(downpcd, main_colour, stopMin, stopMax)
+                lag = pc.PointCloud(downpcd, lag_colour, leftMin, leftMax)
+                lead = pc.PointCloud(downpcd, lead_colour, rightMin, rightMax)
 
                 # Print status
                 template = "Points in cloud {}, x1 = {}, x2 = {}"
 
-                print(template.format(len(cloud.pcd.points), len(left.pcd.points), len(right.pcd.points)))
+                print(template.format(len(cloud.pcd.points), len(lag.pcd.points), len(lead.pcd.points)))
                 print("Time taken", round(time.time() - time_start, 2))
                 time_start = time.time()
 
@@ -137,52 +138,56 @@ def main():
                 # Display pointclouds
                 if (visualising or save_clouds):
                     mesh_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.2, origin=[0, 0, 0])
-                    point_clouds = [mesh_frame, left.pcd, right.pcd]
+                    point_clouds = [mesh_frame, lag.pcd, lead.pcd, lag.bounding, lead.bounding]
 
                 if visualising:
                     visualise.visualise(point_clouds)
 
-                left_points = np.asarray(left.pcd.points)
-                left_average = np.mean(left_points, axis=0)[2]
+                lag_points = np.asarray(lag.pcd.points)
+                lead_points = np.asarray(lead.pcd.points)
 
-                right_points = np.asarray(right.pcd.points)
-                right_average = np.mean(right_points, axis=0)[2]
+                min_avoid = vehicle.min_points_for_avoidance
 
-                average_distance = (left_average + right_average) / 2
-
-                print("Left average:", round(left_average, 2))
-                print("Right average:", round(right_average, 2))
-                print("Average distance:", round(average_distance, 2))
-                
-                # TODO: Wall angle adjust logic
-
-                if average_distance < vehicle.target_distance + vehicle.error_distance and average_distance > vehicle.target_distance - vehicle.error_distance:
-                    angle = calculate_wall_angle(left_average, right_average)
-                    print("Angle from wall:", round(angle, 2))
-                    if angle > (vehicle.error_angle / 2):
-                        print("Angle fix.")
-                        vehicle.calculate_travel_time(angle)
-                        command = "right"
-                    elif angle < (-vehicle.error_angle / 2):
-                        print("Angle fix.")
-                        vehicle.calculate_travel_time(angle)
-                        command = "left"
-                    else:
-                        print("At target distance.")
-                        command = "forward"
-                elif average_distance > vehicle.target_distance:
-                    print("Too far.")
-                    vehicle.travel_time = 0.2
-                    command = "left"
-                elif average_distance < vehicle.target_distance:
-                    print("Too close.")
-                    vehicle.travel_time = 0.2
-                    command = "right"
-                else: 
+                if lag_points < min_avoid and lead_points < min_avoid:
+                    # S0: Cant find any wall
+                    print("No wall found")
                     command = "stop"
-                    
-                if command == "left" or command == "right":
-                    vehicle.turn(command)
+                elif lag_points > min_avoid and lead_points < min_avoid:
+                    #S1: End of row. Therefore complete end of row turn.
+                    print("End of row")
+                    #TODO: End of row turn.
+                    vehicle.calculate_travel_time(180)
+                    command = "left"
+                elif lead_points > min_avoid:
+                    # S2 and S3: Following row or starting to follow row.
+                    print("Follow wall")
+                    # TODO: plane estimation and correction on leading region
+                    plane_model, _ = pe.estimate_plane_equation(lead)
+                    distance = pe.estimate_distance_from_wall(plane_model)
+                    angle = pe.estimate_angle_to_turn(plane_model)
+                    if distance > target_distance + error_distance:
+                        # Not at the target distance from the wall. Turn left to fix this.
+                        # TODO: Make this turn less aggressive and random
+                        print("Too far")
+                        command = "left"
+                        vehicle.travel_time = 0.3
+                    elif distance < target_distance - error_distance:
+                        # Not at the target distance from the wall. Turn right to fix this.
+                        print("Too close")
+                        command = "right"
+                        vehicle.travel_time = 0.3
+                    else:
+                        if angle > error_angle:
+                            print("Turning to follow wall.")
+                            vehicle.calculate_travel_time(angle)
+                            if angle > 0:
+                                command = "left"
+                            else:
+                                command = "right"
+                        else:
+                            command = "forward"
+                else:
+                    command = "stop"
 
                 print("Command:", command)
 

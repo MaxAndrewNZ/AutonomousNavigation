@@ -97,3 +97,25 @@ Once the system is improved to use all information. The angle should be used to 
 
 - The system could follow a flat wall, making small angle adjustments when needed. These adjustments were quite aggressive.
 - The current method resulted in issues wen the rover was outside of the target distance error range. It would turn towards the wall if it was too far away. However, this resuted in the average distance increasing due to taking the two region average for the distance average. This will need to change to fix this issue. I will investigate a more robust method for wall following using a depth camera.
+
+## Lead and Lag Regions - Dec 2
+
+Attempting to implement a method that breaks up the pointcloud into two regions. These are the leading and lagging regions. This method will not currently handle obstacles infront of the vehicle.
+This will be resolved when the second camera is mounted to the front of the vehicle.
+
+### State Concepts
+
+- if lag and lead are far then cant find wall. Stop or search for wall.
+- if lag close and lead far then at end of row. Complete an end of row turn.
+- if lead close then following row or starting on the row. Use plane estimation to adjust robots angle and distance from wall.
+
+### Turning Issues
+
+This method will likely suffer from the aggresive turning issues from previous methods. Need to speed up the processing so updates can be made more frequently. This may help to smooth the vehicles navigation.
+
+### Testing Method
+
+## 45 degree single camera
+
+This may be a suitable approach.
+Thinking of splitting up the cameras vision space into a number of wedges. Then acting according to the data collected by these.
