@@ -50,13 +50,23 @@ def get_minimal_distance(regions):
     return minimal_distance
 
 def evaluate_distances(regions, depth, region_size):
-    #TODO: Flatten the depth image and cut into wedges
-    flattened_depth = depth
+    y,x = depth.shape
+    cropy = 100
+    starty = y//2-(cropy//2)  
+    cropped_depth_image = depth[starty: starty+cropy]
+
+    #TODO: Check this is all correct. Using average atm. Could maybe use minimum
+    flattened_depth = np.mean(cropped_depth_image, axis=1)
+
     for i in range(0, len(regions)):
 #        depth_chunk = flattened_depth[region_size*i, region_size*(i+1)]
         regions[i].set_depth(flattened_depth)
 
-    plt.imshow(depth,'gray')
+    plt.imshow(depth,'depth')
+    plt.show()
+    plt.imshow(cropped_depth_image,'cropped depth')
+    plt.show()
+    plt.imshow(cropped_depth_image,'flattened depth')
     plt.show()
 
 def set_velocity(min_distance, orientation, target_distance, max_speed):
@@ -113,7 +123,7 @@ def main():
     # Regions
     num_regions = 5
     angle_range = 180
-    x_max = 365
+    x_max = 365 #TODO: Update this to the actual size
     region_size = x_max / 5
 
     close_dist = 0.5
@@ -169,7 +179,9 @@ def main():
                         topic,buf = vehicle.sensor_socket.recv_multipart()
                         if topic == b'depthraw':
                             time_start = time.time()
-                            depth = cv2.imdecode(buf, dtype=np.float32)
+                            #TODO: Need to figure out how to recieve the raw depth data.
+                            # depth = cv2.imdecode(buf, dtype=np.float32)
+                            depth = cv2.fromstring(buf, dtype=np.float32)
                             found_cloud = True
 
                 vehicle.sensor_socket.close()
@@ -177,9 +189,7 @@ def main():
             else:
                 print("Depth:", depth)
                 updated_cloud = True
-                print("Dept size:", depth.size())
-
-                x_max = depth.size()[0]
+                print("Dept size (y, x):", depth.size)
 
                 if (visualising):
                     #TODO: 2D visualisation
@@ -195,7 +205,7 @@ def main():
 
                 # Wall distance error
                 d_error = min_distance - target_distance
-                if len(linear_errors > 0):
+                if len(linear_errors == 0):
                     linear_errors.append((0, current_time() - 100))
                 linear_pd = (p_const * d_error) + d_const * ((d_error - linear_errors[-1][0]) / (current_time - linear_errors[-1][1]))
                 linear_errors.append((d_error, current_time))
