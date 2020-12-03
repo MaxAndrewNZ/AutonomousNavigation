@@ -12,10 +12,11 @@ import random
 import os
 
 class Region:
-    def __init__(self, min_x, max_x, distance_limits):
+    def __init__(self, min_x, max_x, distance_limits, name):
         self.min_x = min_x
         self.max_x = max_x
         self.close_dist, self.med_dist, self.inf_dist = distance_limits
+        self.name = name
 
         self.current_dist = "inf"
         self.closest_point = math.inf
@@ -88,6 +89,13 @@ def set_velocity(min_distance, orientation, target_distance, max_speed):
 
     return velocity
 
+def print_sensor_state(regions):
+    string_to_print = ""
+    for region in regions:
+        string_to_print += "(" + region.name + ": " + region.current_dist + ") "
+
+    print(string_to_print)
+
 def main():
     """   
     This method is the heart of the Landrov navigation. 
@@ -131,11 +139,11 @@ def main():
     inf_dist = 2.0
     distance_limits = [close_dist, med_dist, inf_dist]
 
-    back_left_region = Region(0, region_size, distance_limits)
-    left_region = Region(region_size, region_size * 2, distance_limits)
-    front_left_region = Region(region_size * 2, region_size * 3, distance_limits)
-    front_region = Region(region_size * 3, region_size * 4, distance_limits)
-    front_right_region = Region(region_size * 4, region_size * 5, distance_limits)
+    back_left_region = Region(0, region_size, distance_limits, "bleft")
+    left_region = Region(region_size, region_size * 2, distance_limits, "left")
+    front_left_region = Region(region_size * 2, region_size * 3, distance_limits, "fleft")
+    front_region = Region(region_size * 3, region_size * 4, distance_limits, "front")
+    front_right_region = Region(region_size * 4, region_size * 5, distance_limits, "fright")
 
     regions = [back_left_region, left_region, front_left_region, front_region, front_right_region]
 
@@ -197,6 +205,7 @@ def main():
 
                 #TODO: Implement wedge navigation
                 evaluate_distances(regions, depth, region_size)
+                print_sensor_state(regions)
                 min_distance, min_distance_index = get_minimal_distance(regions)
                 current_time = time.time()
                 min_dist_x_value = regions[min_distance_index].closest_point[1]
