@@ -12,7 +12,7 @@ import pickle,zmq
 import open3d as o3d
 
 # Changing between sending pointcloud and images
-SEND_POINTCLOUD = True
+SEND_POINTCLOUD = False
 
 # Configure depth and color streams
 pipeline = rs.pipeline()
@@ -89,6 +89,7 @@ try:
 
             socket.send_multipart([b'rgbimage',cv2.imencode('.jpg',color_image, encode_param)[1].tostring()])
             socket.send_multipart([b'depthimage',cv2.imencode('.jpg',depth_8bit, encode_param)[1].tostring()])
+            socket.send_multipart([b'depthraw', depth_image.tostring()])
 
 
 finally:

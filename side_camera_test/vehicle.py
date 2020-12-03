@@ -16,7 +16,7 @@ class Vehicle:
         self.sensor_socket = None
 
         self.speed = 0.0
-        self.following_side = "right"
+        self.following_side = "left"
         self.target_distance = 1.0
         self.error_distance = 0.2
         self.error_angle = 10.0
@@ -28,7 +28,10 @@ class Vehicle:
         self.turn_time_multiplier = 0.0
         self.maximum_turns = 0
         self.travel_time = 0.0
-        self.wheel_distance_between = 0.35
+        self.wheel_base = 0.35
+        self.wheel_radius = 0.12
+        self.RPM_TO_RAD_PER_S = (2 * math.pi) / 60
+        self.max_rpm = 10
         self.velocity_multiplier = 0.7
         self.max_range = 3.0
     
@@ -54,7 +57,17 @@ class Vehicle:
         self.sensor_socket.connect("tcp://192.168.8.106:5557")
         # self.sensor_socket.connect(self.ip + ":" + self.sensor_port)
         self.sensor_socket.setsockopt(zmq.SUBSCRIBE,b'pointcloud')
-    
+
+    def connect_depth(self):
+        self.sensor_socket = self.context.socket(zmq.SUB)
+        self.sensor_socket.connect("tcp://192.168.8.106:5557")
+        self.sensor_socket.setsockopt(zmq.SUBSCRIBE,b'depthimage')     
+        
+    def connect_depth_raw(self):
+        self.sensor_socket = self.context.socket(zmq.SUB)
+        self.sensor_socket.connect("tcp://192.168.8.106:5557")
+        self.sensor_socket.setsockopt(zmq.SUBSCRIBE,b'depthraw') 
+
     def set_min_points_for_avoidance(self, min_points_for_avoidance):
         self.min_points_for_avoidance = min_points_for_avoidance
 
@@ -72,7 +85,7 @@ class Vehicle:
         else:
             velocity = self.turn_speed * self.velocity_multiplier
             print("Velocity:", velocity)
-            wheel_distance_circumference = self.wheel_distance_between * math.pi
+            wheel_distance_circumference = self.wheel_base * math.pi
             distance = wheel_distance_circumference * (abs(angle) / 360)
 
             if velocity <= 0:
@@ -131,6 +144,17 @@ class Vehicle:
             time_spent = time.time() - start_time
 
         self.control_socket.send_multipart([b'motor',pickle.dumps(old_cmd,0)])
+
+    def velocity_to_motor_command(self, linear_velocity, angular_velocity):
+        left_rpm = (linear_velocity - 0.5*angular_velocity*self.wheel_base)/(self.RPM_TO_RAD_PER_S * self.wheel_radius);
+        right_rpm = (linear_velocity + 0.5*angular_velocity*self.wheel_base)/(self.RPM_TO_RAD_PER_S * self.wheel_radius)
+
+        left_speed = left_rpm / self.max_rpm
+        right_speed = right_rpm / self.max_rpm
+
+        cmd = (left_speed, right_speed)
+        print("Moving with left motor:", left_speed, "right motor", right_speed)
+        self.control_socket.send_multipart([b'motor',pickle.dumps(cmd,0)])
 
 
 def distance_to_command(veh, distance, angle):

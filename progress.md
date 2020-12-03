@@ -115,7 +115,31 @@ This method will likely suffer from the aggresive turning issues from previous m
 
 ### Testing Method
 
-## 45 degree single camera
+## 45 degree single camera - Dec 3
 
 This may be a suitable approach.
 Thinking of splitting up the cameras vision space into a number of wedges. Then acting according to the data collected by these.
+
+### Linear Velocities
+
+The method used 4 different velocities for the linear velocity component.
+
+- 0 - Minimal distance is less that the target distance
+- 0.5 - Wall distance is less than 2 times the target distance
+- 0.4 - The vehicles angle offset from the wall is greater than 1.75 radians
+- 1 - For faster movement towards the wall
+
+### Distance Error
+
+Difference between target distance and the shortest measured distance.
+
+Proportional derivative (PD) controller used to fix issues of error.
+
+- Proportional constant - currently set to 15
+- Derivative constant - currently set to 0
+
+### Angle Error
+
+The minimum distance's angle from the wall must be pi/2 for left following.
+
+The angular velocity is the sum of interventions from PD distance control and P angle control
