@@ -10,6 +10,8 @@ import visualise_pointclouds as visualise
 import cv2
 import math
 from matplotlib import pyplot as plt
+import matplotlib.lines as mlines
+from matplotlib import cm
 import random
 import os
 
@@ -31,20 +33,41 @@ def npToPcd(np):
 
 def get_minimal_distance(pointcloud):
     npCloud = np.asarray(pointcloud.pcd.points)
-    minimal_distance_index = np.argmin(npCloud[:,2], axis=0)
-    minimal_distance_point = npCloud[minimal_distance_index]
-    print("Min point:", minimal_distance_point)
+    min_dist_index = np.argmin(npCloud[:,2], axis=0)
+    min_dist_point = npCloud[min_dist_index]
+    print("Min point:", min_dist_point)
+    min_dist = math.sqrt((min_dist_point[0] ** 2 + min_dist_point[2] ** 2))
 
-    return minimal_distance_point
+    return min_dist_point, min_dist
 
-def flatten_pointcloud(pointcloud):
-    # TODO: Figure out how to do this
-    npCloud = np.asarray(pointcloud.pcd.points)
-    flattened = npCloud[:,0]
-    print(flattened)
-    plt.plot(flattened)
+def flatten_pointcloud(pointcloud, closest_point, region_min, region_max, linear_errors, angular_errors):
+    np_cloud = np.asarray(pointcloud.pcd.points)
+    plt.ion()
     plt.show()
-    time.sleep(0.5)
+    plt.clf()
+
+    plt.subplot(3, 1, 1)
+    plt.scatter(np_cloud[:,0], np_cloud[:,2], color='grey')
+    plt.scatter(closest_point[0], closest_point[1], color='red')
+    plt.plot([0, closest_point[0]], [0, closest_point[1]], color='red')
+    plt.xlim(region_min[0], region_max[0])
+    plt.ylim(region_min[2], region_max[2])
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.xlabel('X distance')
+    plt.ylabel('Z distance')
+    plt.title('Top down view - Closest Point')
+
+    plt.subplot(3, 1, 2)
+    plt.plot(*zip(*linear_errors), color='blue')
+    plt.ylabel('Linear Error')
+
+    plt.subplot(3, 1, 3)
+    plt.plot(*zip(*angular_errors), color='blue')
+    plt.xlabel('time (seconds)')
+    plt.ylabel('Angular Error')
+
+    plt.draw()
+    plt.pause(0.001)
 
 def plot_errors(linear_errors, angular_errors):
     plt.subplot(2, 1, 1)
@@ -56,6 +79,7 @@ def plot_errors(linear_errors, angular_errors):
     plt.plot(*zip(*angular_errors))
     plt.xlabel('time (seconds)')
     plt.ylabel('Angular Error')
+
     plt.show()
 
 def set_velocity(min_distance, orientation, target_distance, max_speed):
@@ -77,6 +101,22 @@ def set_velocity(min_distance, orientation, target_distance, max_speed):
 
     return velocity
 
+def flatten_cloud(cloud):
+    np_cloud = np.asarray(cloud.pcd.points)
+    removed_y = np.delete(np_cloud, 1, axis=1)
+    removed_dups = np.unique(removed_y, axis=0)
+
+    return removed_dups
+
+def k_nearest(flat_map):
+    #TODO: Implement k nearest
+    dist_2 = np.sum((flat_map - [0, 0])**2, axis=1)
+    closest_point = np.argmin(dist_2)
+    print(closest_point)
+    distance = math.sqrt(flat_map[closest_point][0]**2 + flat_map[closest_point][1]**2)
+
+    return flat_map[closest_point], distance
+
 def main():
     """   
     This method is the heart of the Landrov navigation. 
@@ -86,8 +126,9 @@ def main():
   
     ############      Configuration        ##################
     testing = True
-    visualising = True
-    plotting_error = False
+    visualising = False
+    plotting_error = True
+    plotting_flattened = True
     save_clouds = False
     custom_folder_name = "testing_pc_45"
 
@@ -136,8 +177,8 @@ def main():
     minZ = 0.05
     maxZ = 3
 
-    regionMin = [minX, minY, minZ]
-    regionMax = [maxX, maxY, maxZ]
+    region_min = [minX, minY, minZ]
+    region_max = [maxX, maxY, maxZ]
 
     ############      main loop        ##################
     vehicle = veh.Vehicle("tcp://192.168.8.106", "5556", "5557")
@@ -155,6 +196,7 @@ def main():
 
     custom_folder_name += "_" + following_side + "_" + str(target_distance) + "_" + str(speed) + "_" + str(int(time.time()))
     time_start = time.time()
+    count = 0.1
     try:
         while 1:
             if (testing):
@@ -163,10 +205,11 @@ def main():
                 pcd = o3d.io.read_point_cloud(filename)
                 npCloud = np.asarray(pcd.points)
                 # Flips points to align with those from the landrov
-                offset = np.array([-0.8, 0, -0.5])
+                offset = np.array([-1.8 + count, 0, -0.5 - count])
                 pcd = pc.npToPcd(npCloud * np.array([1, -1, -1]) + offset)
                 # Simulate delays in recieving pointcloud
                 time.sleep(0.1)
+                count += 0.1
                 found_cloud = True
        
             if not found_cloud:
@@ -188,8 +231,14 @@ def main():
             else:
                 downpcd = pcd.voxel_down_sample(voxel_size=0.04)
 
-                cloud = pc.PointCloud(downpcd, main_colour, regionMin, regionMax)
+                cloud = pc.PointCloud(downpcd, main_colour, region_min, region_max)
                 cloud.pcd, ind = cloud.pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+
+                if len(cloud.pcd.points) == 0:
+                    break
+
+                flat_cloud = flatten_cloud(cloud)
+                min_distance_point, min_dist = k_nearest(flat_cloud)
 
                 # Print status
                 print("*" * 64)
@@ -200,16 +249,17 @@ def main():
                 time_start = time.time()
 
                 # Navigation
-                min_distance_point = get_minimal_distance(cloud)
+                # TODO: Remove 3D nearest distance calculation
+                # min_distance_point, min_dist = get_minimal_distance(cloud)
                 current_time = time.time()
-                min_dist_angle = math.atan((min_distance_point[0] / min_distance_point[2]))
-                print("Min Distance:", round(min_distance_point[2], 2))
+                min_dist_angle = math.atan((min_distance_point[0] / min_distance_point[1]))
+                print("Min Distance:", round(min_dist, 2))
                 print("Angle Rad:", round(min_dist_angle, 2))
                 print("Angle Degrees:", round(math.degrees(min_dist_angle), 2))
-                linear_velocity = set_velocity(min_distance_point[2], min_dist_angle, target_distance, max_speed)
+                linear_velocity = set_velocity(min_dist, min_dist_angle, target_distance, max_speed)
 
                 # Wall distance error
-                d_error = min_distance_point[2] - target_distance
+                d_error = min_dist - target_distance
                 if len(linear_errors) == 0:
                     linear_errors.append((current_time - 1, 0))
                 linear_pd = (p_const * d_error) + d_const * ((d_error - linear_errors[-1][1]) / (current_time - linear_errors[-1][0]))
@@ -246,6 +296,9 @@ def main():
                     visualise.visualise([cloud.pcd, mesh_frame, closest_point_cloud, line_set, outlier_cloud])
                     time.sleep(0.5)
 
+                if plotting_flattened:
+                    flatten_pointcloud(cloud, min_distance_point, region_min, region_max, linear_errors, angular_errors)
+
                 command = "forward"
 
             if updated_cloud and not testing:
@@ -270,6 +323,5 @@ def main():
             vehicle.stop()
         if plotting_error:
             plot_errors(linear_errors, angular_errors)
-
 
 main()
