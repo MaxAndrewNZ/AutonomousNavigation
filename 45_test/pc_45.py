@@ -60,10 +60,12 @@ def display_errors(pointcloud, closest_point, region_min, region_max, linear_err
 
     plt.subplot(3, 1, 2)
     plt.plot(*zip(*linear_errors), color='blue')
+    plt.ylim(-1, 1)
     plt.ylabel('Linear Error')
 
     plt.subplot(3, 1, 3)
     plt.plot(*zip(*angular_errors), color='blue')
+    plt.ylim(-1, 1)
     plt.xlabel('time (seconds)')
     plt.ylabel('Angular Error')
 
@@ -73,11 +75,13 @@ def display_errors(pointcloud, closest_point, region_min, region_max, linear_err
 def plot_errors(linear_errors, angular_errors):
     plt.subplot(2, 1, 1)
     plt.plot(*zip(*linear_errors))
+    plt.ylim(-1, 1)
     plt.ylabel('Linear Error')
     plt.title('Linear and angular error over time')
 
     plt.subplot(2, 1, 2)
     plt.plot(*zip(*angular_errors))
+    plt.ylim(-1, 1)
     plt.xlabel('time (seconds)')
     plt.ylabel('Angular Error')
 
@@ -85,13 +89,13 @@ def plot_errors(linear_errors, angular_errors):
 
 def set_velocity(min_distance, orientation, target_distance, max_speed):
     # Velocities
-    vel_stop = max_speed * 0.1
+    # vel_stop = max_speed * 0.1
     vel_mid = max_speed * 0.5
     vel_slow = max_speed * 0.4
     vel_full = max_speed
 
     if min_distance < target_distance:
-        velocity = vel_stop
+        velocity = vel_slow
     elif min_distance < 2 * target_distance:
         velocity = vel_mid
     elif orientation > 1.75:
@@ -130,11 +134,11 @@ def main():
     visualising = False
     plotting_error = True
     save_clouds = False
-    moving = False
+    moving = True
     custom_folder_name = "testing_pc_45"
 
     following_side = "left" # left or right
-    target_distance = 0.6 # Meters
+    target_distance = 0.8 # Meters
     error_distance = 0.1 # Meters
     error_angle = 10.0 # Degrees
 
@@ -144,25 +148,14 @@ def main():
     maximum_turns = 10 # Vehicle will stop after turning this many times in a row
     min_points_for_avoidance = 80 # Increase if navigation is disrupted due to noise
 
-    max_speed = 0.5
+    max_speed = 1.0
     angular_limit = 1.5
 
     # Visualisation region colours37
     main_colour = [0.45, 0.45, 0.45]
 
-    # Regions
-    num_regions = 5
-    angle_range = 180
-    x_max = 365 #TODO: Update this to the actual size
-    region_size = x_max / 5
-
-    close_dist = 0.5
-    med_dist = 1.0
-    inf_dist = 2.0
-    distance_limits = [close_dist, med_dist, inf_dist]
-
     # Proportional and derivative constants
-    p_const = 15
+    p_const = 1
     d_const = 0
 
     linear_errors = []
@@ -175,7 +168,7 @@ def main():
     minY = -1.5
     maxY = -0.25
 
-    minZ = 0.05
+    minZ = 0.01
     maxZ = 3
 
     region_min = [minX, minY, minZ]
@@ -256,7 +249,7 @@ def main():
                 # min_distance_point, min_dist = get_minimal_distance(cloud)
                 current_time = time.time()
                 min_dist_angle = math.atan((min_distance_point[0] / min_distance_point[1]))
-                print("Min Distance:", round(min_dist, 2))
+                print("Min Distance:", round(min_dist, 2), "Target Distance:", target_distance)
                 print("Angle Rad:", round(min_dist_angle, 2))
                 print("Angle Degrees:", round(math.degrees(min_dist_angle), 2))
                 linear_velocity = set_velocity(min_dist, min_dist_angle, target_distance, max_speed)
@@ -271,7 +264,7 @@ def main():
                 # Wall angle error
                 #TODO: Check if this should be + or -
                 # a_error = - (min_dist_angle + (math.pi / 4))
-                a_error = min_dist_angle
+                a_error = - min_dist_angle
                 print("A error:", round(a_error, 2), "D error:", round(d_error, 2))
                 angular_p = p_const * a_error
                 angular_errors.append((current_time, a_error))
@@ -280,7 +273,7 @@ def main():
                 angular_velocity = max(min(linear_pd + angular_p, angular_limit), - angular_limit)
 
                 print("Linear velocity:", linear_velocity)
-                print("Angular velocity:", angular_velocity)
+                print("Angular velocity:", round(angular_velocity, 2))
 
                 if (visualising):
                     closest_point_cloud = npToPcd([min_distance_point])
