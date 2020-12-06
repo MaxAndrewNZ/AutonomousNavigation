@@ -85,7 +85,7 @@ def plot_errors(linear_errors, angular_errors):
 
 def set_velocity(min_distance, orientation, target_distance, max_speed):
     # Velocities
-    vel_stop = 0
+    vel_stop = max_speed * 0.1
     vel_mid = max_speed * 0.5
     vel_slow = max_speed * 0.4
     vel_full = max_speed
@@ -130,10 +130,11 @@ def main():
     visualising = False
     plotting_error = True
     save_clouds = False
+    moving = False
     custom_folder_name = "testing_pc_45"
 
     following_side = "left" # left or right
-    target_distance = 0.4 # Meters
+    target_distance = 0.6 # Meters
     error_distance = 0.1 # Meters
     error_angle = 10.0 # Degrees
 
@@ -143,8 +144,8 @@ def main():
     maximum_turns = 10 # Vehicle will stop after turning this many times in a row
     min_points_for_avoidance = 80 # Increase if navigation is disrupted due to noise
 
-    max_speed = 1
-    angular_limit = 2.5
+    max_speed = 0.5
+    angular_limit = 1.5
 
     # Visualisation region colours37
     main_colour = [0.45, 0.45, 0.45]
@@ -168,8 +169,8 @@ def main():
     angular_errors = []
 
     # Region of interest
-    minX = -3
-    maxX = 3
+    minX = -3.5
+    maxX = 3.5
 
     minY = -1.5
     maxY = -0.25
@@ -225,6 +226,7 @@ def main():
                             pcd = o3d.geometry.PointCloud()
                             pcd.points = o3d.utility.Vector3dVector(reshaped_pcd)
                             found_cloud = True
+                            print("new cloud")
 
                 vehicle.sensor_socket.close()
 
@@ -233,6 +235,7 @@ def main():
 
                 cloud = pc.PointCloud(downpcd, main_colour, region_min, region_max)
                 cloud.pcd, ind = cloud.pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+                updated_cloud = True
 
                 if len(cloud.pcd.points) == 0:
                     break
@@ -267,7 +270,8 @@ def main():
 
                 # Wall angle error
                 #TODO: Check if this should be + or -
-                a_error = min_dist_angle + (math.pi / 2)
+                # a_error = - (min_dist_angle + (math.pi / 4))
+                a_error = min_dist_angle
                 print("A error:", round(a_error, 2), "D error:", round(d_error, 2))
                 angular_p = p_const * a_error
                 angular_errors.append((current_time, a_error))
@@ -307,12 +311,14 @@ def main():
                     print("Stopping")
                     vehicle.stop()
                     break
-                elif command == "forward":
-                    vehicle.reset_turn_counts()
+                elif command == "forward" and moving:
+                    # vehicle.reset_turn_counts()
                     vehicle.velocity_to_motor_command(linear_velocity, angular_velocity)
+                elif command == "test_socket":
+                    vehicle.forward()
                 else:
                     print("No Command")
-                    vehicle.stop()
+                    # vehicle.stop()
                 
                 found_cloud = False
                 updated_cloud = False
@@ -321,7 +327,6 @@ def main():
         print("Force Close")
         if not testing:
             vehicle.stop()
-        if plotting_error:
-            plot_errors(linear_errors, angular_errors)
+        plot_errors(linear_errors, angular_errors)
 
 main()

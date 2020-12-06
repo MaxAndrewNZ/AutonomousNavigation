@@ -31,7 +31,7 @@ class Vehicle:
         self.wheel_base = 0.35
         self.wheel_radius = 0.12
         self.RPM_TO_RAD_PER_S = (2 * math.pi) / 60
-        self.max_rpm = 10
+        self.max_rpm = 150
         self.velocity_multiplier = 0.7
         self.max_range = 3.0
     
@@ -153,7 +153,7 @@ class Vehicle:
         right_speed = right_rpm / self.max_rpm
 
         cmd = (left_speed, right_speed)
-        print("Moving with left motor:", left_speed, "right motor", right_speed)
+        print("Moving with left motor:", round(left_speed, 2), "right motor", round(right_speed, 2))
         self.control_socket.send_multipart([b'motor',pickle.dumps(cmd,0)])
 
 

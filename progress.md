@@ -156,4 +156,7 @@ Not expecting this method to work at this stage.
 - However, this method has an issue. Finding the closest point to the camera in the pointcloud is very comutationally expensive.
 - Flattened the pointcloud to ignore y-axis.
 - Added a k nearest neighbour method to calculate the closest point to the vehicle.
->>>>>>> 2fcf1a2193a3f24aa31892a6bf1da938e37338a2
+
+### Testing 45 degree pointcloud method
+
+- 
