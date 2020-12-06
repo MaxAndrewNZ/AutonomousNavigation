@@ -149,3 +149,5 @@ The angular velocity is the sum of interventions from PD distance control and P 
 - Have decided to attempt the 45 degree setup as discussed before, but using a pointcloud instead of a depth map.
 - This should avoid the issue with finding an angle to a point on a depth map.
 - However, this method has an issue. Finding the closest point to the camera in the pointcloud is very comutationally expensive.
+- Flattened the pointcloud to ignore y-axis.
+- Added a k nearest neighbour method to calculate the closest point to the vehicle.
