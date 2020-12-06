@@ -140,7 +140,8 @@ Proportional derivative (PD) controller used to fix issues of error.
 
 ### Angle Error
 
-The minimum distance's angle from the wall must be pi/2 for left following.
+- The minimum distance's angle from the wall must be pi/2 for left following.
+- The angular velocity is the sum of interventions from PD distance control and P angle control
 
 The angular velocity is the sum of interventions from PD distance control and P angle control
 
@@ -148,3 +149,11 @@ The angular velocity is the sum of interventions from PD distance control and P 
 
 Not expecting this method to work at this stage.
 
+## 45 degree single camera with point clouds - Dec 4
+
+- Have decided to attempt the 45 degree setup as discussed before, but using a pointcloud instead of a depth map.
+- This should avoid the issue with finding an angle to a point on a depth map.
+- However, this method has an issue. Finding the closest point to the camera in the pointcloud is very comutationally expensive.
+- Flattened the pointcloud to ignore y-axis.
+- Added a k nearest neighbour method to calculate the closest point to the vehicle.
+>>>>>>> 2fcf1a2193a3f24aa31892a6bf1da938e37338a2
