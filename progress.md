@@ -143,3 +143,8 @@ Proportional derivative (PD) controller used to fix issues of error.
 The minimum distance's angle from the wall must be pi/2 for left following.
 
 The angular velocity is the sum of interventions from PD distance control and P angle control
+
+### Testing 45 degree 5 region
+
+Not expecting this method to work at this stage.
+

@@ -6,8 +6,8 @@ import numpy as np
 context = zmq.Context()
 sensor_socket = context.socket(zmq.SUB)
 sensor_socket.connect("tcp://192.168.8.106:5557")
-sensor_socket.setsockopt(zmq.SUBSCRIBE,b'depthimage') 
-sensor_socket.setsockopt(zmq.SUBSCRIBE,b'depthraw') 
+sensor_socket.setsockopt(zmq.SUBSCRIBE,b'depthimage')
+sensor_socket.setsockopt(zmq.SUBSCRIBE,b'depthraw')
 sensor_socket.setsockopt(zmq.SUBSCRIBE,b'rgbimage') 
 
 print('connected to landrov sensor server')

@@ -60,7 +60,7 @@ def evaluate_distances(regions, depth, region_size):
     flattened_depth = np.mean(cropped_depth_image, axis=1)
 
     for i in range(0, len(regions)):
-#        depth_chunk = flattened_depth[region_size*i, region_size*(i+1)]
+        #depth_chunk = flattened_depth[region_size*i, region_size*(i+1)]
         regions[i].set_depth(flattened_depth)
 
     plt.imshow(depth,'depth')
