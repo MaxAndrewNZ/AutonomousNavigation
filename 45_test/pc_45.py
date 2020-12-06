@@ -40,7 +40,8 @@ def get_minimal_distance(pointcloud):
 
     return min_dist_point, min_dist
 
-def flatten_pointcloud(pointcloud, closest_point, region_min, region_max, linear_errors, angular_errors):
+def display_errors(pointcloud, closest_point, region_min, region_max, linear_errors, angular_errors):
+    #TODO: Possibly plot the target angle and distance on the graphs
     np_cloud = np.asarray(pointcloud.pcd.points)
     plt.ion()
     plt.show()
@@ -125,10 +126,9 @@ def main():
     """
   
     ############      Configuration        ##################
-    testing = True
+    testing = False
     visualising = False
     plotting_error = True
-    plotting_flattened = True
     save_clouds = False
     custom_folder_name = "testing_pc_45"
 
@@ -296,8 +296,8 @@ def main():
                     visualise.visualise([cloud.pcd, mesh_frame, closest_point_cloud, line_set, outlier_cloud])
                     time.sleep(0.5)
 
-                if plotting_flattened:
-                    flatten_pointcloud(cloud, min_distance_point, region_min, region_max, linear_errors, angular_errors)
+                if plotting_error:
+                    display_errors(cloud, min_distance_point, region_min, region_max, linear_errors, angular_errors)
 
                 command = "forward"
 
