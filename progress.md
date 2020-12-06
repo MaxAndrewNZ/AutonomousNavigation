@@ -140,9 +140,8 @@ Proportional derivative (PD) controller used to fix issues of error.
 
 ### Angle Error
 
-The minimum distance's angle from the wall must be pi/2 for left following.
-
-The angular velocity is the sum of interventions from PD distance control and P angle control
+- The minimum distance's angle from the wall must be pi/2 for left following.
+- The angular velocity is the sum of interventions from PD distance control and P angle control
 
 ## 45 degree single camera with point clouds - Dec 4
 
