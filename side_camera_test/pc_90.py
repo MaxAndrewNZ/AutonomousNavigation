@@ -1,5 +1,3 @@
-import sys
-sys.path.insert(1, '../side_camera_test/')
 import time,zmq,pickle
 import numpy as np
 import pyrealsense2 as rs
@@ -7,99 +5,30 @@ import open3d as o3d
 import vehicle as veh
 import pointcloud as pc
 import visualise_pointclouds as visualise
+import display_information as display
 import cv2
 import math
-from matplotlib import pyplot as plt
-import matplotlib.lines as mlines
-from matplotlib import cm
 import random
 import os
 
-def npToPcd(np):
-    """
-    Converts a numpy array to an Open3D pointcloud object. 
 
-    Args:
-        np: A numpy array of a pointcloud.
-
-    Returns:
-        Pointcloud: An Open3D pointcloud object.
-    """
-
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(np)
-
-    return pcd
-
-# def get_minimal_distance(pointcloud):
-#     npCloud = np.asarray(pointcloud.pcd.points)
-#     min_dist_index = np.argmin(npCloud[:,2], axis=0)
-#     min_dist_point = npCloud[min_dist_index]
-#     print("Min point:", min_dist_point)
-#     min_dist = math.sqrt((min_dist_point[0] ** 2 + min_dist_point[2] ** 2))
-
-#     return min_dist_point, min_dist
-
-def display_data(pointcloud, closest_point, region_min, region_max, linear_errors, angular_errors, linear_velocities, angular_velocities):
-    #TODO: Possibly plot the target angle and distance on the graphs
-    np_cloud = np.asarray(pointcloud.pcd.points)
-    plt.ion()
-    plt.show()
-    plt.clf()
-
-    plt.subplot(3, 1, 1)
-    plt.scatter(np_cloud[:,0], np_cloud[:,2], color='grey')
-    plt.scatter(closest_point[0], closest_point[1], color='red')
-    plt.plot([0, closest_point[0]], [0, closest_point[1]], color='red')
-    plt.xlim(region_min[0], region_max[0])
-    plt.ylim(region_min[2], region_max[2])
-    plt.gca().set_aspect('equal', adjustable='box')
-    plt.xlabel('X distance')
-    plt.ylabel('Z distance')
-    plt.title('Top down view - Closest Point')
-
-    plt.subplot(3, 2, 3)
-    plt.plot(*zip(*linear_errors), color='blue')
-    plt.ylim(-3, 3)
-    plt.ylabel('Linear Error')
-
-    plt.subplot(3, 2, 4)
-    plt.plot(*zip(*linear_velocities), color='black')
-    plt.ylim(-1, 1)
-    plt.ylabel('Linear Velocity')
-
-
-    plt.subplot(3, 2, 5)
-    plt.plot(*zip(*angular_errors), color='blue')
-    plt.ylim(-1.57, 1.57)
-    plt.xlabel('time (seconds)')
-    plt.ylabel('Angular Error')
-
-    plt.subplot(3, 2, 6)
-    plt.plot(*zip(*angular_velocities), color='black')
-    plt.ylim(-2, 2)
-    plt.ylabel('Angular Velocities')
-
-    plt.draw()
-    plt.pause(0.001)
-
-def plot_errors(linear_errors, angular_errors):
-    plt.subplot(2, 1, 1)
-    plt.plot(*zip(*linear_errors))
-    plt.ylim(-3, 3)
-    plt.ylabel('Linear Error')
-    plt.title('Linear and angular error over time')
-
-    plt.subplot(2, 1, 2)
-    plt.plot(*zip(*angular_errors))
-    plt.ylim(-1.57, 1.57)
-    plt.xlabel('time (seconds)')
-    plt.ylabel('Angular Error')
-
-    plt.show()
+def get_test_pointcloud(moving, shift_x, shift_y, delay=0.3):
+    # Use saved pointcloud file
+    filename = "1.ply"
+    pcd = o3d.io.read_point_cloud(filename)
+    npCloud = np.asarray(pcd.points)
+    # Flips points to align with those from the landrov
+    offset = np.array([-1.8 + shift_x, 0, -0.5 - shift_y])
+    pcd = pc.npToPcd(npCloud * np.array([1, -1, -1]) + offset)
+    # Simulate delays in recieving pointcloud
+    time.sleep(delay)
+    if moving:
+        shift_x += 0.05 * random.randint(0, 3)
+        shift_y += 0.05 * random.randint(0, 3)
+    
+    return pcd, shift_x, shift_y
 
 def set_velocity(min_distance, orientation, target_distance, max_speed):
-    # Velocities
     vel_stop = 0
     vel_mid = max_speed * 0.5
     vel_slow = max_speed * 0.4
@@ -126,8 +55,7 @@ def flatten_cloud(cloud):
 
     return removed_dups
 
-def k_nearest(flat_map):
-    #TODO: Implement k nearest
+def get_closest_point(flat_map):
     dist_2 = np.sum((flat_map - [0, 0])**2, axis=1)
     closest_point = np.argmin(dist_2)
     print(closest_point)
@@ -147,22 +75,8 @@ def main():
     plotting_error = True
     moving = False
 
-    following_side = "left" # left or right
-    target_distance = 1.2 # Meters
-    error_distance = 0.1 # Meters
-    error_angle = 10.0 # Degrees
-
-    speed = 0.3 # Speed of the vehicle
-    turn_speed = 0.5 # Speed * 2 normally
-    turn_time_multiplier = 0.0 # Consecutive turns get bigger
-    maximum_turns = 10 # Vehicle will stop after turning this many times in a row
-    min_points_for_avoidance = 80 # Increase if navigation is disrupted due to noise
-
-    max_speed = 0.5
-    angular_limit = 1.5
-
-    # Visualisation region colours37
-    main_colour = [0.45, 0.45, 0.45]
+    target_distance = 1.0 # Meters
+    max_speed = 0.5 # 0 - 1
 
     # Proportional and derivative constants
     linear_p_const = 0
@@ -189,39 +103,26 @@ def main():
     region_min = [minX, minY, minZ]
     region_max = [maxX, maxY, maxZ]
 
-    ############      main loop        ##################
     vehicle = veh.Vehicle("tcp://192.168.8.106", "5556", "5557")
 
     if testing == False:
         vehicle.connect_control()
         print('Connected to vehicle server')
 
-    vehicle.set_min_points_for_avoidance(min_points_for_avoidance) 
-    vehicle.set_following_variables(following_side, target_distance, error_distance, error_angle)
-    vehicle.set_control_variables(speed, turn_speed, turn_time_multiplier, maximum_turns)
-
     found_cloud = False
     updated_cloud = False
 
     time_start = time.time()
-    count = 0.1
+
+    shift_x = 0.1
+    shift_y = 0.1
 
     try:
         while 1:
             time_start = time.time()
             if (testing):
-                # Use saved pointcloud file
-                filename = "1.ply"
-                pcd = o3d.io.read_point_cloud(filename)
-                npCloud = np.asarray(pcd.points)
-                # Flips points to align with those from the landrov
-                offset = np.array([-1.8 + count, 0, -0.5 - count])
-                pcd = pc.npToPcd(npCloud * np.array([1, -1, -1]) + offset)
-                # Simulate delays in recieving pointcloud
-                time.sleep(0.3)
+                pcd, shift_x, shift_y = get_test_pointcloud(moving, shift_x, shift_y)
                 time_start = time.time()
-                if moving:
-                    count += 0.05
                 found_cloud = True
        
             if not found_cloud:
@@ -243,7 +144,7 @@ def main():
 
             else:
                 downpcd = pcd.voxel_down_sample(voxel_size=0.1)
-                cloud = pc.PointCloud(downpcd, main_colour, region_min, region_max)
+                cloud = pc.PointCloud(downpcd, [0, 0, 0], region_min, region_max)
                 cloud.pcd, ind = cloud.pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
                 updated_cloud = True
 
@@ -251,7 +152,7 @@ def main():
                     break
 
                 flat_cloud = flatten_cloud(cloud)
-                min_distance_point, min_dist = k_nearest(flat_cloud)
+                min_distance_point, min_dist = get_closest_point(flat_cloud)
 
                 # Print status
                 print("*" * 64)
@@ -260,7 +161,6 @@ def main():
                 print(template.format(len(cloud.pcd.points)))
 
                 # Navigation
-                # TODO: Remove 3D nearest distance calculation
                 current_time = time.time()
                 min_dist_angle = math.atan((min_distance_point[0] / min_distance_point[1]))
                 linear_velocity = set_velocity(min_dist, min_dist_angle, target_distance, max_speed)
@@ -279,11 +179,8 @@ def main():
                 angular_errors.append((current_time, a_error))
 
                 # TODO: Calculate angular velocity complex
-                # angular_velocity = max(min(linear_pd + angular_p, angular_limit), - angular_limit)
-                # Simple angular implementation
-                # Add linear error element. Should include standard linear movement when doing this.
-                #bound angular
                 angular_velocity = max(min(angular_p + linear_p, 2), -2)
+
                 turning_direction = "left"
                 if angular_velocity < 0:
                     turning_direction = "right"
@@ -296,13 +193,14 @@ def main():
                 angular_velocities.append((current_time, angular_velocity))
 
                 if plotting_error:
-                    display_data(cloud, min_distance_point, region_min, region_max, linear_errors, angular_errors, linear_velocities, angular_velocities)
+                    display.display_data(cloud, min_distance_point, region_min, region_max, linear_errors, angular_errors, linear_velocities, angular_velocities)
                 
             if updated_cloud:
                 print("Time processing", round(time.time() - time_start, 2))
 
             if updated_cloud and not testing:
-                vehicle.velocity_to_motor_command(linear_velocity, angular_velocity)
+                if moving:
+                    vehicle.velocity_to_motor_command(linear_velocity, angular_velocity)
                 
                 found_cloud = False
                 updated_cloud = False
@@ -311,6 +209,6 @@ def main():
         print("Force Close")
         if not testing:
             vehicle.stop()
-        plot_errors(linear_errors, angular_errors)
+        display.display_errors(linear_errors, angular_errors)
 
 main()
