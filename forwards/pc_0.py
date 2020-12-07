@@ -49,40 +49,12 @@ def get_test_pointcloud(moving, shift_x, shift_y, delay=0.3):
     
     return pcd, shift_x, shift_y
 
-def set_velocity(min_distance, orientation, target_distance, max_speed):
-    vel_stop = 0
-    vel_mid = max_speed * 0.5
-    vel_slow = max_speed * 0.4
-    vel_full = max_speed
-
-    if min_distance < target_distance * 0.5:
-        velocity = vel_stop
-    elif min_distance < target_distance:
-        velocity = vel_slow
-    elif min_distance < 2 * target_distance:
-        velocity = vel_mid
-    elif orientation > 1.75:
-        print("Large difference in angle.")
-        velocity = vel_slow
-    else:
-        velocity = vel_full
-
-    return velocity
-
 def flatten_cloud(cloud):
     np_cloud = np.asarray(cloud.pcd.points)
     removed_y = np.delete(np_cloud, 1, axis=1)
     removed_dups = np.unique(removed_y, axis=0)
 
     return removed_dups
-
-def get_closest_point(flat_map):
-    dist_2 = np.sum((flat_map - [0, 0])**2, axis=1)
-    closest_point = np.argmin(dist_2)
-    print(closest_point)
-    distance = math.sqrt(flat_map[closest_point][0]**2 + flat_map[closest_point][1]**2)
-
-    return flat_map[closest_point], distance
 
 def main():
     """   
@@ -97,7 +69,7 @@ def main():
     moving = True
 
     target_distance = 1.0 # Meters
-    max_speed = 1.0 # 0 - 1
+    speed = 0 # 0 - 1
 
     # Proportional and derivative constants
     linear_p_const = 0
@@ -116,7 +88,7 @@ def main():
     maxY = -0.25
 
     minZ = 0.01
-    maxZ = 3.0
+    maxZ = 2.0
 
     region_min = [minX, minY, minZ]
     region_max = [maxX, maxY, maxZ]
@@ -199,7 +171,7 @@ def main():
 
                 #TODO: Make a navigation adjustment from this information.
                 angular_velocity = max(min(angular_p + linear_p, 2), -2)
-                linear_velocity = max_speed * 0.3
+                linear_velocity = speed
 
                 print("Target Distance:", target_distance, "Distance:", round(distance, 2), "D error:", round(d_error, 2))
                 print("Angle Degrees:", round(math.degrees(angle), 2), "Angle Rad:", round(angle, 2), "A error:", round(a_error, 2))
