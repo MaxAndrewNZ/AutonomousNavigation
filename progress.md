@@ -174,3 +174,15 @@ Not expecting this method to work at this stage.
 - Linear velocity was added to the robot. It followed some walls, however, the performance remained quite poor.
 - I would like to test this in a larger area to determine if the method has any promise. However, for now, it is not looking too effective.
 - The aggression of the method could be eased through smoothing the pointcloud. This may be achieved through voxel downsampling, agressive outlier removal, or possibly the use of convex hulls.
+
+## Simple 2D line follower - Dec 8
+
+- Attempting to implement a following method for one side of the vineyard row. 
+- The camera is facing forwards
+- A line is fitted to the data. 
+- The equation of this line is used to calculate the angular and linear error,
+- These errors are then converted into motor commands.
+
+## Test
+
+- 
