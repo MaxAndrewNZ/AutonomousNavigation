@@ -146,12 +146,19 @@ class Vehicle:
         self.control_socket.send_multipart([b'motor',pickle.dumps(old_cmd,0)])
 
     def velocity_to_motor_command(self, linear_velocity, angular_velocity):
-        left_rpm = (linear_velocity - 0.5*angular_velocity*self.wheel_base)/(self.RPM_TO_RAD_PER_S * self.wheel_radius);
-        right_rpm = (linear_velocity + 0.5*angular_velocity*self.wheel_base)/(self.RPM_TO_RAD_PER_S * self.wheel_radius)
+        #TODO: Figure out getting this physics model working.
+        # left_rpm = (linear_velocity - 0.5*angular_velocity*self.wheel_base)/(self.RPM_TO_RAD_PER_S * self.wheel_radius);
+        # right_rpm = (linear_velocity + 0.5*angular_velocity*self.wheel_base)/(self.RPM_TO_RAD_PER_S * self.wheel_radius)
 
-        left_speed = left_rpm / self.max_rpm
-        right_speed = right_rpm / self.max_rpm
+        # left_speed = left_rpm / self.max_rpm
+        # right_speed = right_rpm / self.max_rpm
 
+        # Raw turn.
+        linear_velocity = 0
+
+        left_speed = - angular_velocity * 0.5 + linear_velocity
+        right_speed = angular_velocity * 0.5 + linear_velocity 
+        
         cmd = (left_speed, right_speed)
         print("Moving with left motor:", round(left_speed, 2), "right motor", round(right_speed, 2))
         self.control_socket.send_multipart([b'motor',pickle.dumps(cmd,0)])

@@ -157,6 +157,8 @@ Not expecting this method to work at this stage.
 - Flattened the pointcloud to ignore y-axis.
 - Added a k nearest neighbour method to calculate the closest point to the vehicle.
 
-### Testing 45 degree pointcloud method
+### Testing 45 degree pointcloud method - Dec 7
 
-- 
+- The solution did not perform well.
+- Its turning and speed control almost felt random.
+- Am looking into starting with a more simplified model.
