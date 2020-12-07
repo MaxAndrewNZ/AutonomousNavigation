@@ -154,7 +154,7 @@ class Vehicle:
         # right_speed = right_rpm / self.max_rpm
 
         # Raw turn.
-        linear_velocity = 0
+        # linear_velocity = 0
 
         left_speed = - angular_velocity * 0.5 + linear_velocity
         right_speed = angular_velocity * 0.5 + linear_velocity 

@@ -162,3 +162,15 @@ Not expecting this method to work at this stage.
 - The solution did not perform well.
 - Its turning and speed control almost felt random.
 - Am looking into starting with a more simplified model.
+
+## Simplified Method - Dec 7
+
+- The target distance is ignored for now.
+- Focusing on aligning robot with the wall using the closest point method
+
+### Test
+
+- The robot was tested just with aligning to the nearest point. This worked ok. However, the robot would often overshoot the target. This could likely be fixed through sending pointclouds at a faster rate. The method currently takes 0.6 seconds to process each pointcloud.
+- Linear velocity was added to the robot. It followed some walls, however, the performance remained quite poor.
+- I would like to test this in a larger area to determine if the method has any promise. However, for now, it is not looking too effective.
+- The aggression of the method could be eased through smoothing the pointcloud. This may be achieved through voxel downsampling, agressive outlier removal, or possibly the use of convex hulls.

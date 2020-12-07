@@ -145,10 +145,10 @@ def main():
     ############      Configuration        ##################
     testing = True
     plotting_error = True
-    moving = True
+    moving = False
 
     following_side = "left" # left or right
-    target_distance = 0.8 # Meters
+    target_distance = 1.2 # Meters
     error_distance = 0.1 # Meters
     error_angle = 10.0 # Degrees
 
@@ -158,7 +158,7 @@ def main():
     maximum_turns = 10 # Vehicle will stop after turning this many times in a row
     min_points_for_avoidance = 80 # Increase if navigation is disrupted due to noise
 
-    max_speed = 1.0
+    max_speed = 0.5
     angular_limit = 1.5
 
     # Visualisation region colours37
@@ -166,7 +166,7 @@ def main():
 
     # Proportional and derivative constants
     linear_p_const = 0
-    angular_p_const = 1
+    angular_p_const = 1.5
 
     d_const = 0
 
@@ -208,6 +208,7 @@ def main():
 
     try:
         while 1:
+            time_start = time.time()
             if (testing):
                 # Use saved pointcloud file
                 filename = "1.ply"
@@ -218,6 +219,7 @@ def main():
                 pcd = pc.npToPcd(npCloud * np.array([1, -1, -1]) + offset)
                 # Simulate delays in recieving pointcloud
                 time.sleep(0.3)
+                time_start = time.time()
                 if moving:
                     count += 0.05
                 found_cloud = True
@@ -225,22 +227,22 @@ def main():
             if not found_cloud:
                 vehicle.connect_pointcloud()
                 while not found_cloud:
-                    if  len(zmq.select([vehicle.sensor_socket],[],[],0)[0]):
+                    if len(zmq.select([vehicle.sensor_socket],[],[],0)[0]):
                         topic,buf = vehicle.sensor_socket.recv_multipart()
                         if topic == b'pointcloud':
-                            time_start = time.time()
                             np_pcd = np.fromstring(buf, dtype=np.float32)
                             num_points = np_pcd.size // 3
                             reshaped_pcd = np.resize(np_pcd, (num_points, 3))
                             pcd = o3d.geometry.PointCloud()
                             pcd.points = o3d.utility.Vector3dVector(reshaped_pcd)
+                            print("Time get cloud", round(time.time() - time_start, 2))
+                            time_start = time.time()
                             found_cloud = True
 
                 vehicle.sensor_socket.close()
 
             else:
-                downpcd = pcd.voxel_down_sample(voxel_size=0.05)
-
+                downpcd = pcd.voxel_down_sample(voxel_size=0.1)
                 cloud = pc.PointCloud(downpcd, main_colour, region_min, region_max)
                 cloud.pcd, ind = cloud.pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
                 updated_cloud = True
@@ -256,8 +258,6 @@ def main():
                 template = "Points in cloud {}"
 
                 print(template.format(len(cloud.pcd.points)))
-                print("Time taken", round(time.time() - time_start, 2))
-                time_start = time.time()
 
                 # Navigation
                 # TODO: Remove 3D nearest distance calculation
@@ -284,16 +284,22 @@ def main():
                 # Add linear error element. Should include standard linear movement when doing this.
                 #bound angular
                 angular_velocity = max(min(angular_p + linear_p, 2), -2)
+                turning_direction = "left"
+                if angular_velocity < 0:
+                    turning_direction = "right"
 
                 print("Target Distance:", target_distance, "Distance:", round(min_dist, 2), "D error:", round(d_error, 2))
                 print("Angle Degrees:", round(math.degrees(min_dist_angle), 2), "Angle Rad:", round(min_dist_angle, 2), "A error:", round(a_error, 2))
-                print("Linear velocity:", linear_velocity, "Angular velocity:", round(angular_velocity, 2))
-
+                print("Linear velocity:", round(linear_velocity, 2), "Angular velocity:", round(angular_velocity, 2), "Turning", turning_direction)
+                       
                 linear_velocities.append((current_time, linear_velocity))
                 angular_velocities.append((current_time, angular_velocity))
 
                 if plotting_error:
                     display_data(cloud, min_distance_point, region_min, region_max, linear_errors, angular_errors, linear_velocities, angular_velocities)
+                
+            if updated_cloud:
+                print("Time processing", round(time.time() - time_start, 2))
 
             if updated_cloud and not testing:
                 vehicle.velocity_to_motor_command(linear_velocity, angular_velocity)
